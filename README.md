@@ -69,9 +69,16 @@ If document downloading is enabled, files are stored in `data/downloads/`.
 The PDF extractor writes an index and table extracts to `data/extracted_tables/`.
 It also writes `db-unza26-csc4792-samfya_cdf_evidence_index.csv` so CDF-relevant pages can be reviewed before values are normalised.
 
+PDF extraction uses larger optional packages that are not needed for the live website scrape. Install them only when required:
+
+```bash
+pip install -r requirements-pdf.txt
+python scripts/extract_pdf_tables.py
+```
+
 ## Seed data already supplied
 
-Because this package was assembled in an environment that cannot make normal Python internet requests to the council website, I also included seed raw files based on publicly indexed Samfya Town Council pages and documents. They let the Data Cleaner begin immediately while the live scripts are run on a normal internet-connected PC.
+Seed raw files based on publicly indexed Samfya Town Council pages and documents are retained as a reproducible fallback and comparison set. The populated non-seed files are the latest live scraper outputs; Person B should use those first and consult the seed files only where their provenance is adequate.
 
 Seed files:
 

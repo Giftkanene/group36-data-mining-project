@@ -8,13 +8,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urljoin, urlparse, parse_qs
+import csv
 import re
 import time
 import hashlib
 import warnings
 from datetime import datetime, timezone
 
-import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
@@ -40,6 +40,17 @@ NEWS_START_URLS = [
 ALLOWED_DOC_EXTENSIONS = {
     ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".csv", ".zip"
 }
+
+RESOURCE_COLUMNS = [
+    "council", "category", "year_raw", "document_title_raw",
+    "document_url", "file_type", "source_page", "retrieved_at_utc",
+]
+
+NEWS_COLUMNS = [
+    "council", "title_raw", "published_date_raw", "excerpt_raw",
+    "article_url", "source_listing_page", "article_text_raw",
+    "linked_document_urls", "retrieved_at_utc",
+]
 
 @dataclass
 class ScrapeConfig:
@@ -70,13 +81,14 @@ def build_session() -> requests.Session:
     return session
 
 
-def get_soup(
+def get_response(
     session: requests.Session,
     url: str,
     timeout: int = 30,
+    stream: bool = False,
     allow_insecure_tls_fallback: bool = True,
-) -> BeautifulSoup:
-    """Fetch an official council page, handling its current expired certificate.
+) -> requests.Response:
+    """Fetch an official resource, handling its current expired certificate.
 
     The Samfya site currently presents an expired TLS certificate. We always try
     normal certificate verification first. Only after that specific failure, and
@@ -84,16 +96,31 @@ def get_soup(
     verification so public, non-authenticated academic data remains accessible.
     """
     try:
-        response = session.get(url, timeout=timeout)
+        response = session.get(url, timeout=timeout, stream=stream)
     except requests.exceptions.SSLError:
         if not allow_insecure_tls_fallback or not is_same_domain(url):
             raise
-        print(f"  WARNING: expired TLS certificate at {url}; retrying public page without verification.")
+        print(f"  WARNING: expired TLS certificate at {url}; retrying public resource without verification.")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", requests.packages.urllib3.exceptions.InsecureRequestWarning)
-            response = session.get(url, timeout=timeout, verify=False)
+            response = session.get(url, timeout=timeout, stream=stream, verify=False)
     response.raise_for_status()
-    return BeautifulSoup(response.text, "lxml")
+    return response
+
+
+def get_soup(
+    session: requests.Session,
+    url: str,
+    timeout: int = 30,
+    allow_insecure_tls_fallback: bool = True,
+) -> BeautifulSoup:
+    response = get_response(
+        session,
+        url,
+        timeout,
+        allow_insecure_tls_fallback=allow_insecure_tls_fallback,
+    )
+    return BeautifulSoup(response.text, "html.parser")
 
 
 def clean_text(value: str | None) -> str:
@@ -168,7 +195,18 @@ def scrape_resource_page(
     return rows
 
 
-def scrape_resources(config: ScrapeConfig, session: requests.Session | None = None) -> pd.DataFrame:
+def deduplicate(records: list[dict], key: str) -> list[dict]:
+    seen: set[str] = set()
+    unique: list[dict] = []
+    for record in records:
+        value = record.get(key, "")
+        if value and value not in seen:
+            seen.add(value)
+            unique.append(record)
+    return unique
+
+
+def scrape_resources(config: ScrapeConfig, session: requests.Session | None = None) -> list[dict]:
     session = session or build_session()
     records: list[dict] = []
     for category, url in RESOURCE_PAGES.items():
@@ -185,13 +223,7 @@ def scrape_resources(config: ScrapeConfig, session: requests.Session | None = No
             print(f"  WARNING: failed to scrape {url}: {exc}")
         time.sleep(config.delay_seconds)
 
-    df = pd.DataFrame(records)
-    if df.empty:
-        return pd.DataFrame(columns=[
-            "council", "category", "year_raw", "document_title_raw",
-            "document_url", "file_type", "source_page", "retrieved_at_utc"
-        ])
-    return df.drop_duplicates(subset=["document_url"]).reset_index(drop=True)
+    return deduplicate(records, "document_url")
 
 
 def extract_article_from_node(node, page_url: str) -> dict | None:
@@ -278,7 +310,7 @@ def scrape_news_listing(
     return records
 
 
-def scrape_news(config: ScrapeConfig, session: requests.Session | None = None) -> pd.DataFrame:
+def scrape_news(config: ScrapeConfig, session: requests.Session | None = None) -> list[dict]:
     session = session or build_session()
     records: list[dict] = []
 
@@ -317,14 +349,7 @@ def scrape_news(config: ScrapeConfig, session: requests.Session | None = None) -
                 print(f"  WARNING: failed to retrieve article {record['article_url']}: {exc}")
             time.sleep(config.delay_seconds)
 
-    df = pd.DataFrame(records)
-    if df.empty:
-        return pd.DataFrame(columns=[
-            "council", "title_raw", "published_date_raw", "excerpt_raw",
-            "article_url", "source_listing_page", "article_text_raw",
-            "linked_document_urls", "retrieved_at_utc"
-        ])
-    return df.drop_duplicates(subset=["article_url"]).reset_index(drop=True)
+    return deduplicate(records, "article_url")
 
 
 def safe_filename(url: str, fallback_title: str = "document") -> str:
@@ -337,12 +362,23 @@ def safe_filename(url: str, fallback_title: str = "document") -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "_", base)
 
 
-def download_document(session: requests.Session, url: str, title: str, timeout: int) -> Path | None:
+def download_document(
+    session: requests.Session,
+    url: str,
+    title: str,
+    timeout: int,
+    allow_insecure_tls_fallback: bool = True,
+) -> Path | None:
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
     target = DOWNLOAD_DIR / safe_filename(url, title)
     try:
-        with session.get(url, timeout=timeout, stream=True) as response:
-            response.raise_for_status()
+        with get_response(
+            session,
+            url,
+            timeout,
+            stream=True,
+            allow_insecure_tls_fallback=allow_insecure_tls_fallback,
+        ) as response:
             with target.open("wb") as fh:
                 for chunk in response.iter_content(chunk_size=1024 * 128):
                     if chunk:
@@ -353,12 +389,21 @@ def download_document(session: requests.Session, url: str, title: str, timeout: 
         return None
 
 
-def save_pipe_csv(df: pd.DataFrame, path: Path) -> None:
+def save_pipe_csv(rows: list[dict], path: Path, fieldnames: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(path, sep="|", index=False, encoding="utf-8-sig")
+    with path.open("w", newline="", encoding="utf-8-sig") as stream:
+        writer = csv.DictWriter(
+            stream,
+            fieldnames=fieldnames,
+            delimiter="|",
+            extrasaction="ignore",
+            lineterminator="\n",
+        )
+        writer.writeheader()
+        writer.writerows(rows)
 
 
-def run(config: ScrapeConfig | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+def run(config: ScrapeConfig | None = None) -> tuple[list[dict], list[dict]]:
     config = config or ScrapeConfig()
     session = build_session()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -366,28 +411,50 @@ def run(config: ScrapeConfig | None = None) -> tuple[pd.DataFrame, pd.DataFrame]
     resources = scrape_resources(config, session)
     news = scrape_news(config, session)
 
-    save_pipe_csv(resources, OUTPUT_DIR / "db-unza26-csc4792-samfya_resource_index.csv")
-    save_pipe_csv(news, OUTPUT_DIR / "db-unza26-csc4792-samfya_news.csv")
+    save_pipe_csv(
+        resources,
+        OUTPUT_DIR / "db-unza26-csc4792-samfya_resource_index.csv",
+        RESOURCE_COLUMNS,
+    )
+    save_pipe_csv(
+        news,
+        OUTPUT_DIR / "db-unza26-csc4792-samfya_news.csv",
+        NEWS_COLUMNS,
+    )
 
-    run_metadata = pd.DataFrame([{
+    run_metadata = [{
         "run_at_utc": utc_timestamp(),
         "council": "Samfya Town Council",
         "resource_records": len(resources),
         "news_records": len(news),
         "resource_pages": ";".join(RESOURCE_PAGES.values()),
         "news_start_url": f"{BASE_URL}/?cat=1",
-    }])
-    save_pipe_csv(run_metadata, OUTPUT_DIR / "db-unza26-csc4792-samfya_scrape_run_metadata.csv")
+    }]
+    save_pipe_csv(
+        run_metadata,
+        OUTPUT_DIR / "db-unza26-csc4792-samfya_scrape_run_metadata.csv",
+        [
+            "run_at_utc", "council", "resource_records", "news_records",
+            "resource_pages", "news_start_url",
+        ],
+    )
 
-    if config.download_documents and not resources.empty:
-        local_paths = []
-        for row in resources.itertuples(index=False):
-            path = download_document(session, row.document_url, row.document_title_raw, config.timeout_seconds)
-            local_paths.append(str(path) if path else "")
+    if config.download_documents and resources:
+        for row in resources:
+            path = download_document(
+                session,
+                row["document_url"],
+                row["document_title_raw"],
+                config.timeout_seconds,
+                config.allow_insecure_tls_fallback,
+            )
+            row["downloaded_local_path"] = str(path) if path else ""
             time.sleep(config.delay_seconds)
-        resources = resources.copy()
-        resources["downloaded_local_path"] = local_paths
-        save_pipe_csv(resources, OUTPUT_DIR / "db-unza26-csc4792-samfya_resource_index.csv")
+        save_pipe_csv(
+            resources,
+            OUTPUT_DIR / "db-unza26-csc4792-samfya_resource_index.csv",
+            RESOURCE_COLUMNS + ["downloaded_local_path"],
+        )
 
     print(f"Saved {len(resources)} resource records and {len(news)} news records.")
     return resources, news
