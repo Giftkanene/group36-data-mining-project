@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+HANDOFF_TO_PERSON_B.md
 data/downloads/*
 !data/downloads/.gitkeep
 data/extracted_tables/*
