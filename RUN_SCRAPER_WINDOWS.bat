@@ -16,6 +16,14 @@ if not defined PY (
     exit /b 1
 )
 
+if exist .venv\Scripts\python.exe (
+    .venv\Scripts\python.exe -c "import sys; print(sys.executable)" >nul 2>nul
+    if errorlevel 1 (
+        echo Removing an incomplete or broken virtual environment...
+        rmdir /s /q .venv
+    )
+)
+
 if not exist .venv\Scripts\python.exe (
     if exist .venv (
         echo Removing an incomplete or broken virtual environment...
