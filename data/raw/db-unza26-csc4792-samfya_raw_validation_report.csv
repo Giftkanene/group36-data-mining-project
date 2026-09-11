@@ -1,8 +1,8 @@
 ﻿file_name|severity|check|details
 db-unza26-csc4792-samfya_resource_index_seed.csv|warning|provenance_url|50/53 rows have no document_url
 db-unza26-csc4792-samfya_resource_index_seed.csv|pass|row_count|53 data row(s) read with pipe delimiter
-db-unza26-csc4792-samfya_resource_index.csv|error|row_count|No data rows found
-db-unza26-csc4792-samfya_news.csv|error|row_count|No data rows found
+db-unza26-csc4792-samfya_resource_index.csv|pass|row_count|90 data row(s) read with pipe delimiter
+db-unza26-csc4792-samfya_news.csv|pass|row_count|21 data row(s) read with pipe delimiter
 db-unza26-csc4792-samfya_news_seed.csv|warning|provenance_url|9/16 rows have no article_url
 db-unza26-csc4792-samfya_news_seed.csv|pass|row_count|16 data row(s) read with pipe delimiter
 db-unza26-csc4792-samfya_cdf_projects_seed.csv|pass|row_count|22 data row(s) read with pipe delimiter
