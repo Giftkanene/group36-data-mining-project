@@ -11,6 +11,7 @@ from urllib.parse import urljoin, urlparse, parse_qs
 import re
 import time
 import hashlib
+import warnings
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -47,6 +48,7 @@ class ScrapeConfig:
     max_news_pages: int = 10
     download_documents: bool = False
     fetch_article_details: bool = True
+    allow_insecure_tls_fallback: bool = True
 
 
 def build_session() -> requests.Session:
@@ -68,8 +70,28 @@ def build_session() -> requests.Session:
     return session
 
 
-def get_soup(session: requests.Session, url: str, timeout: int = 30) -> BeautifulSoup:
-    response = session.get(url, timeout=timeout)
+def get_soup(
+    session: requests.Session,
+    url: str,
+    timeout: int = 30,
+    allow_insecure_tls_fallback: bool = True,
+) -> BeautifulSoup:
+    """Fetch an official council page, handling its current expired certificate.
+
+    The Samfya site currently presents an expired TLS certificate. We always try
+    normal certificate verification first. Only after that specific failure, and
+    only for the configured official council domain, we retry without certificate
+    verification so public, non-authenticated academic data remains accessible.
+    """
+    try:
+        response = session.get(url, timeout=timeout)
+    except requests.exceptions.SSLError:
+        if not allow_insecure_tls_fallback or not is_same_domain(url):
+            raise
+        print(f"  WARNING: expired TLS certificate at {url}; retrying public page without verification.")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", requests.packages.urllib3.exceptions.InsecureRequestWarning)
+            response = session.get(url, timeout=timeout, verify=False)
     response.raise_for_status()
     return BeautifulSoup(response.text, "lxml")
 
@@ -110,8 +132,14 @@ def infer_file_type(url: str) -> str:
     return suffix or "unknown"
 
 
-def scrape_resource_page(session: requests.Session, category: str, page_url: str, timeout: int) -> list[dict]:
-    soup = get_soup(session, page_url, timeout)
+def scrape_resource_page(
+    session: requests.Session,
+    category: str,
+    page_url: str,
+    timeout: int,
+    allow_insecure_tls_fallback: bool,
+) -> list[dict]:
+    soup = get_soup(session, page_url, timeout, allow_insecure_tls_fallback)
     rows: list[dict] = []
 
     for anchor in soup.find_all("a", href=True):
@@ -146,7 +174,13 @@ def scrape_resources(config: ScrapeConfig, session: requests.Session | None = No
     for category, url in RESOURCE_PAGES.items():
         print(f"[resources] {category}: {url}")
         try:
-            records.extend(scrape_resource_page(session, category, url, config.timeout_seconds))
+            records.extend(scrape_resource_page(
+                session,
+                category,
+                url,
+                config.timeout_seconds,
+                config.allow_insecure_tls_fallback,
+            ))
         except requests.RequestException as exc:
             print(f"  WARNING: failed to scrape {url}: {exc}")
         time.sleep(config.delay_seconds)
@@ -193,14 +227,19 @@ def extract_article_from_node(node, page_url: str) -> dict | None:
     }
 
 
-def scrape_article_detail(session: requests.Session, article_url: str, timeout: int) -> tuple[str, str]:
+def scrape_article_detail(
+    session: requests.Session,
+    article_url: str,
+    timeout: int,
+    allow_insecure_tls_fallback: bool,
+) -> tuple[str, str]:
     """Get full public article text and any linked council documents.
 
     Listing-page excerpts are often too short to describe a CDF project. Keeping
     the full raw text allows the cleaner to extract fields without revisiting the
     site, while the linked-document list preserves a traceable evidence trail.
     """
-    soup = get_soup(session, article_url, timeout)
+    soup = get_soup(session, article_url, timeout, allow_insecure_tls_fallback)
     content = soup.select_one("article .entry-content, .entry-content, .post-content")
     if content is None:
         content = soup.find("article") or soup
@@ -214,8 +253,13 @@ def scrape_article_detail(session: requests.Session, article_url: str, timeout: 
     return text[:20000], ";".join(document_urls)
 
 
-def scrape_news_listing(session: requests.Session, url: str, timeout: int) -> list[dict]:
-    soup = get_soup(session, url, timeout)
+def scrape_news_listing(
+    session: requests.Session,
+    url: str,
+    timeout: int,
+    allow_insecure_tls_fallback: bool,
+) -> list[dict]:
+    soup = get_soup(session, url, timeout, allow_insecure_tls_fallback)
     records: list[dict] = []
     for node in soup.find_all("article"):
         record = extract_article_from_node(node, url)
@@ -244,7 +288,12 @@ def scrape_news(config: ScrapeConfig, session: requests.Session | None = None) -
         url = f"{BASE_URL}/?cat=1" if page_number == 1 else f"{BASE_URL}/?cat=1&paged={page_number}"
         print(f"[news] page {page_number}: {url}")
         try:
-            page_records = scrape_news_listing(session, url, config.timeout_seconds)
+            page_records = scrape_news_listing(
+                session,
+                url,
+                config.timeout_seconds,
+                config.allow_insecure_tls_fallback,
+            )
         except requests.RequestException as exc:
             print(f"  WARNING: failed to scrape {url}: {exc}")
             break
@@ -257,7 +306,10 @@ def scrape_news(config: ScrapeConfig, session: requests.Session | None = None) -
         for record in records:
             try:
                 article_text, document_urls = scrape_article_detail(
-                    session, record["article_url"], config.timeout_seconds
+                    session,
+                    record["article_url"],
+                    config.timeout_seconds,
+                    config.allow_insecure_tls_fallback,
                 )
                 record["article_text_raw"] = article_text
                 record["linked_document_urls"] = document_urls

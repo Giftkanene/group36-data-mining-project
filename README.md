@@ -105,3 +105,7 @@ docs: document scraper methodology and handoff workflow
 ## Ethics / respectful scraping
 
 The scraper uses a descriptive User-Agent, timeout handling, retries, deduplication and a delay between requests. Do not increase the request rate aggressively. The aim is academic data collection from public council pages, not load testing the server.
+
+## Current Samfya website certificate issue
+
+At the time this package was prepared, the official Samfya Town Council website presented an expired HTTPS certificate. The scraper verifies certificates normally first. If that specific verification fails for an official `samfyacouncil.gov.zm` page, it logs a warning and retries that public, non-authenticated page without certificate verification. This narrowly scoped fallback makes the public data accessible while keeping the limitation explicit in the terminal output and scrape metadata.
