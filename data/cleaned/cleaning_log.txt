@@ -1,0 +1,14 @@
+=== Samfya Town Council cleaning run ===
+CDF projects: loaded projects seed (22 rows)
+CDF projects: loaded activities seed (6 rows)
+CDF projects: dropped 0 unusable row(s).
+CDF projects: removed 0 exact duplicate row(s).
+Council resources: loaded 90 rows.
+Council resources: dropped 0 unusable row(s).
+Council resources: removed 0 exact duplicate row(s).
+News: loaded 21 rows.
+News: dropped 0 unusable row(s).
+News: removed 0 exact duplicate row(s).
+WROTE data\cleaned\db-unza26-csc4792-samfya_cdf_projects.csv (28 rows x 30 cols)
+WROTE data\cleaned\db-unza26-csc4792-samfya_council_resources.csv (90 rows x 17 cols)
+WROTE data\cleaned\db-unza26-csc4792-samfya_news.csv (21 rows x 20 cols)
