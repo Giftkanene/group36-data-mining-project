@@ -12,7 +12,7 @@ Official council website: https://www.samfyacouncil.gov.zm
 - Automatic discovery of council documents (CDF projects, grants/loans, bursaries, publications, budgets, minutes and financial statements).
 - A news/article scraper with pagination.
 - Full public article text and linked-document URLs for traceability.
-- A document downloader for linked PDFs and office documents.
+- A document downloader for linked PDFs and all office documents.
 - A PDF extraction helper using `pdfplumber`, including a CDF evidence index and table manifest.
 - A validation script that checks row counts, required columns, pipe delimiters, duplicate URLs and missing provenance URLs.
 - A Jupyter notebook showing the scraping workflow and methodology.
@@ -35,7 +35,7 @@ All CSV files produced by this package use the **pipe character `|` as the separ
 RUN_SCRAPER_WINDOWS.bat
 ```
 
-The batch file creates a virtual environment, installs requirements and runs the scraper.
+The batch file creates a virtual environment, as well as installs requirements and runs the scraper.
 It also replaces an incomplete/broken `.venv` automatically. The original project had a virtual environment pointing at an unavailable Windows Store Python installation; this improved package intentionally does not include that broken environment.
 
 ## Manual run
@@ -117,4 +117,5 @@ The scraper uses a descriptive User-Agent, timeout handling, retries, deduplicat
 
 At the time this package was prepared, the official Samfya Town Council website presented an expired HTTPS certificate. The scraper verifies certificates normally first. If that specific verification fails for an official `samfyacouncil.gov.zm` page, it logs a warning and retries that public, non-authenticated page without certificate verification. This narrowly scoped fallback makes the public data accessible while keeping the limitation explicit in the terminal output and scrape metadata.
 
-Last reviewed: 14-09-2026
+
+Last reviewed: 09/14/2026
