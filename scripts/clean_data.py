@@ -1,6 +1,4 @@
-"""
-Person B - Data Cleaner
-Samfya Town Council (Group 36) cleaning pipeline.
+"""Samfya Town Council Group 36 cleaning pipeline.
 
 Reads pipe-delimited raw CSVs from data/raw/ and writes pipe-delimited
 cleaned CSVs to data/cleaned/. Idempotent: safe to re-run at any time.

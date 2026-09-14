@@ -25,7 +25,7 @@ Or invoke Python directly without activating:
 All raw files live in `data/raw/` and are pipe-delimited, UTF-8. They are
 **never modified in place** by the cleaning script.
 
-Live files from Person A's scrape:
+Live files from the Group 36 scraping workflow:
 - `db-unza26-csc4792-samfya_resource_index.csv` (90 rows)
 - `db-unza26-csc4792-samfya_news.csv` (21 rows)
 - `db-unza26-csc4792-samfya_scrape_run_metadata.csv`
@@ -93,7 +93,7 @@ The CDF evidence comes in two different shapes:
   `activity_type_raw`, `description_raw`, `quantity_raw`, `source_type`.
 
 Both are valid evidence, so they are merged into one CDF table with a
-`record_kind` column (`project` or `activity`). Person C can filter on this
+`record_kind` column (`project` or `activity`). Dataset users can filter on this
 column if they want a projects-only or activities-only view. Unification
 columns:
 

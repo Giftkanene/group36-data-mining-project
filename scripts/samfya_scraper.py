@@ -1,7 +1,7 @@
 """Samfya Town Council scraper for UNZA CSC 4792 Group 36.
 
 Outputs are pipe-separated CSV files. The script intentionally keeps data raw
-so that Person B (Data Cleaner) can perform standardisation and cleaning.
+so the cleaning workflow can perform standardisation and preprocessing.
 """
 from __future__ import annotations
 

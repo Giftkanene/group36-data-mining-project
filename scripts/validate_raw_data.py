@@ -1,4 +1,4 @@
-"""Validate raw CSC 4792 scraper outputs before handing them to Person B.
+"""Validate raw CSC 4792 scraper outputs before cleaning begins.
 
 The script does not alter source data. It writes a pipe-separated validation
 report so that missing URLs, empty live runs and duplicated records are visible

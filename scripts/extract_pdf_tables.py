@@ -1,6 +1,6 @@
 """Extract text and tables from downloaded Samfya PDF documents.
 
-This is intentionally a raw extraction stage. Person B should clean and
+This is intentionally a raw extraction stage. The cleaning workflow should
 standardise the resulting table files rather than treating them as final data.
 """
 from pathlib import Path
