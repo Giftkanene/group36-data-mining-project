@@ -14,7 +14,7 @@ data/raw/db-unza26-csc4792-samfya_resource_index.csv
 data/raw/db-unza26-csc4792-samfya_resource_index_seed.csv
 data/raw/db-unza26-csc4792-samfya_scrape_run_metadata.csv
 evidence/SOURCE_NOTES.md
-notebooks/Group36_Dataming_Project.ipynb
+notebooks/Group36_Data_Mining_Project.ipynb
 requirements-pdf.txt
 requirements.txt
 scripts/extract_pdf_tables.py

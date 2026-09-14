@@ -1,10 +1,19 @@
-# CSC 4792 Mini Project — Group 36
-## Person A: Scraper Lead — Samfya Town Council
+# CSC 4792 Mini Project Group 36
+## Samfya Town Council Data Collection Cleaning and Curation
 
-This folder is the handoff package for **Person A (Scraper Lead)** in **Project Group 36**.
-The assigned local authority is **Samfya Town Council**.
+This repository contains Group 36's reproducible workflow for collecting public Samfya Town Council records, validating raw outputs, cleaning and standardising data, publishing the final files on Kaggle, and documenting the dataset.
 
 Official council website: https://www.samfyacouncil.gov.zm
+
+## Team responsibilities
+
+| Member | Contribution |
+|---|---|
+| Gift Kanene | Group coordination, web scraping, software, data curation, GitHub and Moodle coordination |
+| Khadijah Zimba | Support for data collection and submission coordination |
+| Ben Samuel | Data cleaning, validation, and documentation |
+| Mwansa Matanda | Kaggle dataset description and publication coordination |
+| Lusungu Mulenga | Data description paper preparation |
 
 ## What is included
 
@@ -16,8 +25,8 @@ Official council website: https://www.samfyacouncil.gov.zm
 - A PDF extraction helper using `pdfplumber`, including a CDF evidence index and table manifest.
 - A validation script that checks row counts, required columns, pipe delimiters, duplicate URLs and missing provenance URLs.
 - A Jupyter notebook showing the scraping workflow and methodology.
-- Pipe-separated raw/seed CSV files so Person B can start cleaning immediately.
-- A handoff note explaining what Person B should do next.
+- Pipe-separated raw/seed CSV files for the cleaning workflow.
+- Documentation explaining the handoff from collection to cleaning and publication.
 
 ## Important assignment formatting rule
 
@@ -78,7 +87,7 @@ python scripts/extract_pdf_tables.py
 
 ## Seed data already supplied
 
-Seed raw files based on publicly indexed Samfya Town Council pages and documents are retained as a reproducible fallback and comparison set. The populated non-seed files are the latest live scraper outputs; Person B should use those first and consult the seed files only where their provenance is adequate.
+Seed raw files based on publicly indexed Samfya Town Council pages and documents are retained as a reproducible fallback and comparison set. The populated non-seed files are the latest live scraper outputs. The cleaning workflow should use those first and consult the seed files only where their provenance is adequate.
 
 Seed files:
 
@@ -97,7 +106,7 @@ After a live run, execute:
 python scripts/validate_raw_data.py
 ```
 
-Do not hand the live `resource_index.csv` or `news.csv` to Person B if the validation report shows an empty-output error. Resolve or document every missing direct evidence URL before final Kaggle preparation.
+Do not use the live `resource_index.csv` or `news.csv` for cleaning if the validation report shows an empty-output error. Resolve or document every missing direct evidence URL before final Kaggle preparation.
 
 ## Suggested GitHub commit messages
 
